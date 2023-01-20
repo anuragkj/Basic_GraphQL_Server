@@ -6,7 +6,8 @@ const {
     GraphQLString,
     GraphQLList,
     GraphQLInt,
-    GraphQLNonNull
+    GraphQLNonNull,
+    GraphQLScalarType
 } = require('graphql')
 const app = express()
 // The arrays can be replaced by database and the database queries by array queries
@@ -80,12 +81,62 @@ const RootQueryType = new GraphQLObjectType({
             type: GraphQLList(AuthorType),
             description: 'List of authors',
             resolve: () => authors
+        },
+        author: {
+            type: AuthorType,
+            description: 'Single author',
+            args: {
+                id: {
+                    type: GraphQLInt
+                }
+            },
+            resolve: (parent, args) => authors.find(author => author.id === args.id)
         }
     })
 })
 
+const RootMutationType = new GraphQLObjectType({
+    name: 'Mutation',
+    description: 'Root Mutation',
+    fields: () => ({
+        addBook: {
+            type: BookType,
+            description: 'Add a book',
+            args: {
+                name: {
+                    type: GraphQLNonNull(GraphQLString)
+                },
+                authorID: {
+                    type: GraphQLNonNull(GraphQLString)
+                }
+            },
+            resolve: (parent, args) => {
+                const book = { id: books.length + 1, name : args.name, authorID : args.authorID}
+                books.push(book)
+                return book
+            }
+        },
+        addAuthor: {
+            type: AuthorType,
+            description: 'Add an author ',
+            args: {
+                name: {
+                    type: GraphQLNonNull(GraphQLString)
+                }
+            },
+            resolve: (parent, args) => {
+                const author = { id: authors.length + 1, name : args.name}
+                authors.push(author)
+                return author
+            }
+        }
+        
+    })
+})
+
 const schema = new GraphQLSchema({
-    query: RootQueryType
+    query: RootQueryType,
+    mutation: RootMutationType
 })
 
 app.use('/graphql', expressGraphQL({
