@@ -9,7 +9,7 @@ const {
     GraphQLNonNull
 } = require('graphql')
 const app = express()
-
+// The arrays can be replaced by database and the database queries by array queries
 const authors = [
 	{ id: 1, name: 'J. K. Rowling' },
 	{ id: 2, name: 'J. R. R. Tolkien' },
@@ -33,7 +33,29 @@ const BookType = new GraphQLObjectType({
     fields: () => ({
         id: { type: new GraphQLNonNull(GraphQLInt)},
         name: { type: new GraphQLNonNull(GraphQLString) },
-        authorId: { type: new GraphQLNonNull(GraphQLInt)}
+        authorId: { type: new GraphQLNonNull(GraphQLInt)},
+        author: { 
+            type: AuthorType,
+            resolve: (book) => {
+                return authors.find(author => author.id === book.authorID)
+            }
+        }
+    })
+})
+
+
+const AuthorType = new GraphQLObjectType({
+    name: 'Author',
+    description: 'This represents a author of a book',
+    fields: () => ({
+        id: { type: new GraphQLNonNull(GraphQLInt)},
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        books: {
+            type: new GraphQLList(BookType),
+            resolve: (author) => {
+                return books.filter(book => book.authorId === author.id)
+            }
+        }
     })
 })
 
@@ -41,12 +63,29 @@ const RootQueryType = new GraphQLObjectType({
     name: 'Query',
     description: 'Root query',
     fields: () => ({
+        book: {
+            type: GraphQLList(BookType),
+            description: 'A single book',
+            args:{
+                id: {type: GraphQLInt}
+            },
+            resolve: (parent, args) => books.find(book => book.id === args.id)
+        },
         books: {
             type: GraphQLList(BookType),
             description: 'List of books',
             resolve: () => books
+        },
+        authors: {
+            type: GraphQLList(AuthorType),
+            description: 'List of authors',
+            resolve: () => authors
         }
     })
+})
+
+const schema = new GraphQLSchema({
+    query: RootQueryType
 })
 
 app.use('/graphql', expressGraphQL({
